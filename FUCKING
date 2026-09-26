@@ -17,6 +17,33 @@ local window = library:AddWindow("Gym Legends PUBLIC | Welcome, " .. localPlayer
 local features = window:AddTab("farm")
 features:Show() -- Makes the tab visible
 
+-- 🔒 Lock Position
+features:AddSwitch("Lock Position", function(Value)
+    if Value then
+        local currentPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+        getgenv().posLock = game:GetService("RunService").Heartbeat:Connect(function()
+            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
+            end
+        end)
+    else
+        if getgenv().posLock then
+            getgenv().posLock:Disconnect()
+            getgenv().posLock = nil
+        end
+    end
+end)
+
+-- 🖼️ Hide All Frames
+features:AddSwitch("Hide All Frames", function(bool)
+    local rSto = game:GetService("ReplicatedStorage")
+    for _, obj in pairs(rSto:GetChildren()) do
+        if obj.Name:match("Frame$") then
+            obj.Visible = not bool
+        end
+    end
+end)
+
 local AutoPunchActive = false
 
 features:AddSwitch("Auto Punch", function(Value)
