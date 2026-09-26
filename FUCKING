@@ -475,6 +475,81 @@ features:AddSwitch("Auto Weight", function(state)
     end)
 end)
 
+-- Variable to track the switch state
+local farmEnabled = false
+
+-- Add Combined Switch
+features:AddSwitch("Auto Push Up", function(state)
+    farmEnabled = state
+    
+    task.spawn(function()
+        while farmEnabled do
+            local player = game:GetService("Players").LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            
+            -- Auto-equip push-up tool if not already equipped
+            if player and player:FindFirstChild("Backpack") then
+                local holdingTool = character:FindFirstChildOfClass("Tool")
+                local hasPushUpTool = holdingTool and (holdingTool.Name:lower():find("push") or holdingTool.Name:lower():find("mat"))
+                
+                if not hasPushUpTool then
+                    for _, tool in ipairs(player.Backpack:GetChildren()) do
+                        if tool:IsA("Tool") and (tool.Name:lower():find("push") or tool.Name:lower():find("mat")) then
+                            tool.Parent = character
+                            break
+                        end
+                    end
+                end
+            end
+            
+            -- Fire the muscle event with the original "rep" argument
+            local args = {
+                [1] = "rep"
+            }
+            if player:FindFirstChild("muscleEvent") then
+                player.muscleEvent:FireServer(unpack(args))
+            end
+            
+            task.wait(0.1) -- Adjust speed if needed
+        end
+        
+        -- When switched OFF: put the push up tool back into the backpack
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character
+        if character and player:FindFirstChild("Backpack") then
+            for _, tool in ipairs(character:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("push") or tool.Name:lower():find("mat")) then
+                    tool.Parent = player.Backpack
+                end
+            end
+        end
+    end)
+end)
+
+-- Variables for Auto Farm Loop
+local autoRebirthActive = false
+
+-- Add Switch (Toggle)
+features:AddSwitch("Fast Rebirths", function(bool)
+    autoRebirthActive = bool
+    
+    -- When the switch is turned on, start looping
+    if autoRebirthActive then
+        task.spawn(function()
+            while autoRebirthActive do
+                local args = {
+                    "rebirthRequest"
+                }
+                
+                game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer(unpack(args))
+                
+                -- Wait a bit between requests to prevent crashing/rate-limiting
+                task.wait(0.01)
+            end
+        end)
+    end
+end)
+
 features:AddSwitch("Auto Fortune Wheel", function(state)
     wheelEnabled = state
     
