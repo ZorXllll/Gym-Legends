@@ -1236,3 +1236,693 @@ tab:AddSwitch("Muscle King Rock", function(state)
         end
     end
 end):Set(false)
+
+local Tab = window:AddTab("⚙️ Misc") -- Name of tab
+
+local misc = Tab:AddFolder("Misc")
+
+-- 4. Server Hop Function Definition
+local function serverHop()
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    
+    local placeId = game.PlaceId
+    local serversUrl = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
+    
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(serversUrl))
+    end)
+    
+    if success and result and result.data then
+        for _, server in ipairs(result.data) do
+            -- Ensure the server has room and isn't the one you are currently in
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                pcall(function()
+                    TeleportService:TeleportToPlaceInstance(placeId, server.id, LocalPlayer)
+                end)
+                return -- Stop executing once teleport is initiated
+            end
+        end
+        print("❌ No alternative public servers found.")
+    else
+        warn("⚠️ Failed to fetch server list. Retrying native teleport...")
+        -- Fallback: basic teleport if API lookup is blocked or rate-limited
+        pcall(function()
+            TeleportService:Teleport(placeId, LocalPlayer)
+        end)
+    end
+end
+
+-- 5. Add the Server Hop Button to Elerium
+misc:AddButton("Server Hop", function()
+    print("🔄 Initializing Server Hop...")
+    serverHop()
+end)
+
+-- 4. Rejoin Function Definition
+local function rejoinServer()
+    local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    
+    local placeId = game.PlaceId
+    local jobId = game.JobId
+
+    -- If there's only 1 player in the server, a standard Teleport works best as a fallback
+    if #Players:GetPlayers() <= 1 then
+        pcall(function()
+            TeleportService:Teleport(placeId, LocalPlayer)
+        end)
+    else
+        -- Force a teleport directly back into the current active server instance
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
+        end)
+    end
+end
+
+-- 5. Add the Rejoin Button to Elerium
+misc:AddButton("Rejoin Server", function()
+    print("🔄 Reconnecting to current server...")
+    rejoinServer()
+end)
+
+misc:AddButton("Emotes", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))()
+end)
+
+misc:AddButton("Jerk Tool (R15)", function()
+    loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
+end)
+
+misc:AddButton("Fly GUI V3", function()
+    -- This executes the external Fly GUI script when the button is clicked
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+end)
+
+local ClickTPEnabled = false
+local Mouse = game.Players.LocalPlayer:GetMouse()
+-- Changed AddToggle to AddSwitch
+misc:AddSwitch("Click Teleport", function(Value)
+    ClickTPEnabled = Value
+end)
+
+Mouse.Button1Down:Connect(function()
+    if ClickTPEnabled then
+        local character = game.Players.LocalPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            root.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
+misc:AddLabel("~~~~~~~~~~~~~")
+
+-- Configuration variables
+local JumpModEnabled = false
+local TargetPower = 50
+local TargetHeight = 7.2
+local Player = game.Players.LocalPlayer
+
+-- AddSwitch using proper structural framework
+local SwitchInstance = misc:AddSwitch("Jump~Power", function(State)
+    JumpModEnabled = State
+    if not State then
+        -- Restore base physics options instantly when disabled
+        pcall(function()
+            local Character = Player.Character
+            if Character then
+                local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+                if Humanoid then
+                    Humanoid.UseJumpPower = true
+                    Humanoid.JumpPower = 50
+                    Humanoid.JumpHeight = 7.2
+                end
+            end
+        end)
+    end
+end)
+
+-- AddSlider utilizing proper Elerium data options
+local SliderInstance = misc:AddSlider("Jump Power Value", function(Value)
+    TargetPower = Value
+    TargetHeight = (Value * 0.144) -- Convert ratio scaling safely
+end, {
+    min = 50,
+    max = 1000
+})
+
+-- Continuous loop ensuring state remains applied
+game:GetService("RunService").RenderStepped:Connect(function()
+    if JumpModEnabled then
+        pcall(function()
+            local Character = Player.Character
+            if Character then
+                local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+                if Humanoid then
+                    -- Forces both values to prevent anti-cheat reset overwrites
+                    Humanoid.UseJumpPower = true
+                    Humanoid.JumpPower = TargetPower
+                    Humanoid.JumpHeight = TargetHeight
+                end
+            end
+        end)
+    end
+end)
+
+-- Global Logic Variables
+local noclipEnabled = false
+local runService = game:GetService("RunService")
+local players = game:GetService("Players")
+local localPlayer = players.LocalPlayer
+
+-- ==========================================
+-- 🛠️ MOVEMENT SECTION (Noclip Logic)
+-- ==========================================
+local noclipConnection
+noclipConnection = runService.Stepped:Connect(function()
+    if noclipEnabled and localPlayer.Character then
+        for _, part in pairs(localPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+misc:AddSwitch("Noclip", function(state)
+    noclipEnabled = state
+    
+    if not noclipEnabled and localPlayer.Character then
+        for _, part in pairs(localPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end)
+
+-- 1. Switch to Enable/Disable
+misc:AddSwitch("Infinite Jump", function(Value)
+    InfiniteJumpEnabled = Value
+end)
+
+-- 2. The Logic (Listen for Jump Request)
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if InfiniteJumpEnabled then
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        
+        if humanoid then
+            -- Set state to Jumping to allow another jump in mid-air
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Variables for control
+getgenv().LoopSpeedEnabled = false
+getgenv().WalkSpeedValue = 16
+
+-- 1. The Switch (Toggle)
+misc:AddSwitch("Loop WalkSpeed", function(bool)
+    getgenv().LoopSpeedEnabled = bool
+    print("Loop Speed is now: ", bool)
+end)
+
+-- 2. The Textbox (Speed Value)
+misc:AddTextBox("Speed Amount", function(text)
+    local num = tonumber(text)
+    if num then
+        getgenv().WalkSpeedValue = num
+    end
+end)
+
+-- 3. The Background Loop
+task.spawn(function()
+    while task.wait() do
+        if getgenv().LoopSpeedEnabled then
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid.WalkSpeed = getgenv().WalkSpeedValue
+                end
+            end)
+        end
+    end
+end)
+
+local mainTab = Tab:AddFolder("Misc V2")
+
+local function mk(n, c)
+    local g = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer.PlayerGui)
+    g.Name, g.ResetOnSpawn, g.DisplayOrder, g.IgnoreGuiInset = n, false, 9999999, true
+    local f = Instance.new("Frame", g)
+    f.Size, f.BackgroundColor3, f.BorderSizePixel, f.Visible = UDim2.new(1,0,1,0), c, 0, false
+    return f
+end
+
+local bF, wF = mk("B", Color3.new(0,0,0)), mk("W", Color3.new(1,1,1))
+mainTab:AddSwitch("Black Screen", function(s) bF.Visible = s end)
+mainTab:AddSwitch("White Screen", function(s) wF.Visible = s end)
+
+local fb, orig = false, {game:GetService("Lighting").Ambient, game:GetService("Lighting").OutdoorAmbient, game:GetService("Lighting").Brightness, game:GetService("Lighting").ClockTime, game:GetService("Lighting").GlobalShadows}
+task.spawn(function()
+    while task.wait(0.5) do
+        if fb then game:GetService("Lighting").Ambient, game:GetService("Lighting").OutdoorAmbient, game:GetService("Lighting").Brightness, game:GetService("Lighting").ClockTime, game:GetService("Lighting").GlobalShadows = Color3.new(1,1,1), Color3.new(1,1,1), 2, 14, false end
+    end
+end)
+mainTab:AddSwitch("Fullbright", function(s)
+    fb = s
+    if not s then game:GetService("Lighting").Ambient, game:GetService("Lighting").OutdoorAmbient, game:GetService("Lighting").Brightness, game:GetService("Lighting").ClockTime, game:GetService("Lighting").GlobalShadows = unpack(orig) end
+end)
+
+local be, ne, he, c = false, false, false, {}
+
+local function esp(p)
+    if c[p] or p == game:GetService("Players").LocalPlayer then return end
+    local hl = Instance.new("Highlight")
+    hl.FillColor, hl.FillTransparency, hl.OutlineColor = Color3.new(1,0,0), 0.5, Color3.new(1,1,1)
+    
+    local nt = Instance.new("BillboardGui")
+    nt.Size, nt.AlwaysOnTop, nt.ExtentsOffset = UDim2.new(0,200,0,50), true, Vector3.new(0,3,0)
+    local tx = Instance.new("TextLabel", nt)
+    tx.Size, tx.BackgroundTransparency, tx.Text, tx.TextColor3, tx.TextSize, tx.Font, tx.TextStrokeTransparency = UDim2.new(1,0,1,0), 1, p.Name, Color3.new(1,1,1), 14, Enum.Font.SourceSansBold, 0
+
+    local hb = Instance.new("BillboardGui")
+    hb.Size, hb.AlwaysOnTop, hb.ExtentsOffset = UDim2.new(0,5,0,45), true, Vector3.new(-2.2,0.5,0)
+    local bg = Instance.new("Frame", hb)
+    bg.Size, bg.BackgroundColor3, bg.BorderSizePixel = UDim2.new(1,0,1,0), Color3.fromRGB(40,40,40), 0
+    local hm = Instance.new("Frame", bg)
+    hm.Size, hm.Position, hm.AnchorPoint, hm.BackgroundColor3, hm.BorderSizePixel = UDim2.new(1,0,1,0), UDim2.new(0,0,1,0), Vector2.new(0,1), Color3.fromRGB(0,255,0), 0
+
+    c[p] = {H = hl, N = nt, B = hb, M = hm}
+
+    local function up()
+        local ch = p.Character
+        local hd, hu = ch and ch:WaitForChild("Head", 5), ch and ch:WaitForChild("Humanoid", 5)
+        if ch and hd and hu then
+            hl.Parent, hl.Enabled = ch, be
+            nt.Adornee, nt.Parent, nt.Enabled = hd, hd, ne
+            hb.Adornee, hb.Parent, hb.Enabled = hd, hd, he
+            if c[p].Cn then c[p].Cn:Disconnect() end
+            c[p].Cn = hu:GetPropertyChangedSignal("Health"):Connect(function()
+                local pct = math.clamp(hu.Health / hu.MaxHealth, 0, 1)
+                hm.Size = UDim2.new(1, 0, pct, 0)
+                hm.BackgroundColor3 = Color3.fromHSV(pct * 0.35, 1, 1)
+            end)
+        end
+    end
+    p.CharacterAdded:Connect(function() task.wait(0.5) up() end)
+    up()
+end
+
+for _, p in ipairs(game:GetService("Players"):GetPlayers()) do esp(p) end
+game:GetService("Players").PlayerAdded:Connect(esp)
+game:GetService("Players").PlayerRemoving:Connect(function(p)
+    if c[p] then
+        for _, v in pairs(c[p]) do if typeof(v) == "Instance" then v:Destroy() elseif typeof(v) == "RBXScriptConnection" then v:Disconnect() end end
+        c[p] = nil
+    end
+end)
+
+mainTab:AddSwitch("Box ESP", function(s) be = s for _, d in pairs(c) do if d.H then d.H.Enabled = s end end end)
+mainTab:AddSwitch("Player Name ESP", function(s) ne = s for _, d in pairs(c) do if d.N then d.N.Enabled = s end end end)
+mainTab:AddSwitch("Health Bar ESP", function(s) he = s for _, d in pairs(c) do if d.B then d.B.Enabled = s end end end)
+	
+local fps1 = Tab:AddFolder("Misc V3")
+
+	fps1:AddButton('Remove Textures', function()
+		local v1194, v1195, v1196 = pairs(game:GetDescendants())
+		while true do
+			local v1197
+			v1196, v1197 = v1194(v1195, v1196)
+			if v1196 == nil then
+				break
+			end
+			if v1197:IsA('Decal') or v1197:IsA('Texture') then
+				v1197.Transparency = 1
+			end
+		end
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Performance',
+			Text = 'Textures removed!',
+			Duration = 5,
+		})
+	end)
+	fps1:AddButton('Reduce Graphics', function()
+		settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Performance',
+			Text = 'Graphics reduced!',
+			Duration = 5,
+		})
+	end)
+	fps1:AddButton('Disable Shadows', function()
+		game:GetService('Lighting').GlobalShadows = false
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Performance',
+			Text = 'Shadows disabled!',
+			Duration = 5,
+		})
+	end)
+	fps1:AddButton('Disable Effects', function()
+		local v1198, v1199, v1200 = pairs(game:GetDescendants())
+		while true do
+			local v1201
+			v1200, v1201 = v1198(v1199, v1200)
+			if v1200 == nil then
+				break
+			end
+			if v1201:IsA('ParticleEmitter') or (v1201:IsA('Smoke') or (v1201:IsA('Fire') or v1201:IsA('Sparkles'))) then
+				v1201.Enabled = false
+			end
+		end
+		local _Lighting2 = game:GetService('Lighting')
+		local v1203, v1204, v1205 = pairs(_Lighting2:GetChildren())
+		while true do
+			local v1206
+			v1205, v1206 = v1203(v1204, v1205)
+			if v1205 == nil then
+				break
+			end
+			if v1206:IsA('BlurEffect') or (v1206:IsA('SunRaysEffect') or (v1206:IsA('ColorCorrectionEffect') or (v1206:IsA('BloomEffect') or v1206:IsA('DepthOfFieldEffect')))) then
+				v1206.Enabled = false
+			end
+		end
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Performance',
+			Text = 'Effects disabled!',
+			Duration = 5,
+		})
+	end)
+	fps1:AddButton('Simplify Materials', function()
+		local v1207, v1208, v1209 = pairs(game:GetDescendants())
+		while true do
+			local v1210
+			v1209, v1210 = v1207(v1208, v1209)
+			if v1209 == nil then
+				break
+			end
+			if v1210:IsA('BasePart') and not v1210:IsA('MeshPart') then
+				v1210.Material = Enum.Material.SmoothPlastic
+				if not (v1210.Parent and (v1210.Parent:FindFirstChild('Humanoid') or v1210.Parent.Parent:FindFirstChild('Humanoid'))) then
+					v1210.Reflectance = 0
+				end
+			end
+		end
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Performance',
+			Text = 'Materials simplified!',
+			Duration = 5,
+		})
+	end)
+fps1:AddButton('Remove Fog', function()
+		game:GetService('Lighting').FogEnd = 10000000000
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Performance',
+			Text = 'Fog removed!',
+			Duration = 5,
+		})
+	end)
+	fps1:AddButton('Anti Lag (Advanced)', function()
+		local v1211, v1212, v1213 = pairs(game:GetDescendants())
+		while true do
+			local v1214
+			v1213, v1214 = v1211(v1212, v1213)
+			if v1213 == nil then
+				break
+			end
+			if v1214:IsA('Decal') or v1214:IsA('Texture') then
+				v1214:Destroy()
+			end
+		end
+		local _Terrain = workspace:FindFirstChildOfClass('Terrain')
+		if _Terrain then
+			_Terrain.WaterWaveSize = 0
+			_Terrain.WaterWaveSpeed = 0
+			_Terrain.WaterReflectance = 0
+			_Terrain.WaterTransparency = 1
+			_Terrain.Decorations = false
+		end
+		local v1216, v1217, v1218 = pairs(workspace:GetDescendants())
+		while true do
+			local v1219
+			v1218, v1219 = v1216(v1217, v1218)
+			if v1218 == nil then
+				break
+			end
+			if v1219:IsA('Explosion') or v1219:IsA('Debris') then
+				v1219:Destroy()
+			elseif v1219:IsA('BasePart') and v1219.Name:lower():find('debris') then
+				v1219:Destroy()
+			end
+		end
+		local v1220, v1221, v1222 = pairs(game:GetDescendants())
+		while true do
+			local v1223
+			v1222, v1223 = v1220(v1221, v1222)
+			if v1222 == nil then
+				break
+			end
+			if v1223:IsA('PointLight') or (v1223:IsA('SurfaceLight') or v1223:IsA('SpotLight')) then
+				v1223.Enabled = false
+			end
+		end
+		local v1224, v1225, v1226 = pairs(workspace:GetDescendants())
+		while true do
+			local v1227
+			v1226, v1227 = v1224(v1225, v1226)
+			if v1226 == nil then
+				break
+			end
+			if v1227:IsA('Sound') then
+				v1227:Stop()
+			end
+		end
+		print('Anti-Lag Activated: Textures, lighting, sounds, and effects removed.')
+	end)
+	fps1:AddButton('Ultra FPS Booster', function()
+		settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+		settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
+		settings().Rendering.EagerBulkExecution = true
+		settings().Rendering.ReloadAssets = false
+		local _Lighting3 = game:GetService('Lighting')
+		_Lighting3.GlobalShadows = false
+		_Lighting3.FogEnd = 10000000000
+		_Lighting3.Brightness = 0
+		_Lighting3.EnvironmentDiffuseScale = 0
+		_Lighting3.EnvironmentSpecularScale = 0
+		local v1229, v1230, v1231 = ipairs(game:GetDescendants())
+		while true do
+			local v1232
+			v1231, v1232 = v1229(v1230, v1231)
+			if v1231 == nil then
+				break
+			end
+			if v1232:IsA('ParticleEmitter') or (v1232:IsA('Trail') or (v1232:IsA('Smoke') or (v1232:IsA('Fire') or v1232:IsA('Sparkles')))) then
+				v1232:Destroy()
+			elseif v1232:IsA('PointLight') or (v1232:IsA('SpotLight') or v1232:IsA('SurfaceLight')) then
+				v1232.Enabled = false
+			end
+		end
+		local v1233, v1234, v1235 = pairs(game:GetDescendants())
+		while true do
+			local v1236
+			v1235, v1236 = v1233(v1234, v1235)
+			if v1235 == nil then
+				break
+			end
+			if v1236:IsA('Sound') then
+				v1236:Stop()
+				v1236.Volume = 0
+			end
+		end
+		local v1237, v1238, v1239 = ipairs(game:GetDescendants())
+		while true do
+			local v1240
+			v1239, v1240 = v1237(v1238, v1239)
+			if v1239 == nil then
+				break
+			end
+			if v1240:IsA('Decal') or v1240:IsA('Texture') then
+				v1240:Destroy()
+			end
+		end
+		local _Terrain2 = workspace:FindFirstChildOfClass('Terrain')
+		if _Terrain2 then
+			_Terrain2.WaterWaveSize = 0
+			_Terrain2.WaterWaveSpeed = 0
+			_Terrain2.WaterReflectance = 0
+			_Terrain2.WaterTransparency = 1
+			_Terrain2.Decorations = false
+		end
+		local _LocalPlayer60 = game.Players.LocalPlayer
+		local _PlayerGui3 = _LocalPlayer60:FindFirstChild('PlayerGui')
+		if _PlayerGui3 then
+			local v1244, v1245, v1246 = ipairs(_PlayerGui3:GetDescendants())
+			while true do
+				local v1247
+				v1246, v1247 = v1244(v1245, v1246)
+				if v1246 == nil then
+					break
+				end
+				if v1247:IsA('TextLabel') or (v1247:IsA('ImageLabel') or v1247:IsA('ImageButton')) then
+					v1247.Visible = false
+				end
+			end
+		end
+		local v1248, v1249, v1250 = ipairs(_LocalPlayer60.Character:GetChildren())
+		while true do
+			local v1251
+			v1250, v1251 = v1248(v1249, v1250)
+			if v1250 == nil then
+				break
+			end
+			if v1251:IsA('Accessory') or v1251:IsA('Clothing') then
+				v1251:Destroy()
+			end
+		end
+		local _Humanoid8 = _LocalPlayer60.Character:FindFirstChildWhichIsA('Humanoid')
+		if _Humanoid8 then
+			local v1253, v1254, v1255 = pairs(_Humanoid8:GetPlayingAnimationTracks())
+			while true do
+				local v1256
+				v1255, v1256 = v1253(v1254, v1255)
+				if v1255 == nil then
+					break
+				end
+				v1256:Stop()
+			end
+		end
+		print('Ultra FPS Boost applied. Maximum rendering and resource optimization complete.')
+	end)
+	fps1:AddButton('Full Optimization', function()
+		local v1257, v1258, v1259 = pairs(game:GetDescendants())
+		while true do
+			local v1260
+			v1259, v1260 = v1257(v1258, v1259)
+			if v1259 == nil then
+				break
+			end
+			if v1260:IsA('ParticleEmitter') or (v1260:IsA('Smoke') or (v1260:IsA('Fire') or v1260:IsA('Sparkles'))) then
+				v1260.Enabled = false
+			end
+		end
+		local _Lighting4 = game:GetService('Lighting')
+		_Lighting4.GlobalShadows = false
+		_Lighting4.FogEnd = 9000000000
+		_Lighting4.Brightness = 0
+		settings().Rendering.QualityLevel = 1
+		local v1262, v1263, v1264 = pairs(game:GetDescendants())
+		while true do
+			local v1265
+			v1264, v1265 = v1262(v1263, v1264)
+			if v1264 == nil then
+				break
+			end
+			if v1265:IsA('Decal') or v1265:IsA('Texture') then
+				v1265.Transparency = 1
+			elseif v1265:IsA('BasePart') and not v1265:IsA('MeshPart') then
+				v1265.Material = Enum.Material.SmoothPlastic
+				if not (v1265.Parent and (v1265.Parent:FindFirstChild('Humanoid') or v1265.Parent.Parent:FindFirstChild('Humanoid'))) then
+					v1265.Reflectance = 0
+				end
+			end
+		end
+		local v1266, v1267, v1268 = pairs(_Lighting4:GetChildren())
+		while true do
+			local v1269
+			v1268, v1269 = v1266(v1267, v1268)
+			if v1268 == nil then
+				break
+			end
+			if v1269:IsA('BlurEffect') or (v1269:IsA('SunRaysEffect') or (v1269:IsA('ColorCorrectionEffect') or (v1269:IsA('BloomEffect') or v1269:IsA('DepthOfFieldEffect')))) then
+				v1269.Enabled = false
+			end
+		end
+		game:GetService('StarterGui'):SetCore('SendNotification', {
+			Title = 'Optimization',
+			Text = 'Full optimization applied!',
+			Duration = 5,
+		})
+	end)
+
+    local msud = Tab:AddFolder("Misc V4")
+
+    -- God Mode Toggle
+local godModeToggle = false
+msud:AddSwitch("God Mode (Brawl)", function(State)
+    godModeToggle = State
+    if State then
+        task.spawn(function()
+            while godModeToggle do
+                game:GetService("ReplicatedStorage").rEvents.brawlEvent:FireServer("joinBrawl")
+                task.wait(0)
+            end
+        end)
+    end
+end)
+
+-- Auto Join Brawl Toggle
+local autoJoinToggle = false
+msud:AddSwitch("Auto Join Brawl", function(State)
+    autoJoinToggle = State
+    if State then
+        task.spawn(function()
+            while autoJoinToggle do
+                game:GetService("ReplicatedStorage").rEvents.brawlEvent:FireServer("joinBrawl")
+                task.wait(2)
+            end
+        end)
+    end
+end)
+
+local autoClaimEnabled = false
+local autoFortuneEnabled = false
+
+msud:AddSwitch("Auto Claim All Gifts", function(state)
+    autoClaimEnabled = state
+    
+    if autoClaimEnabled then
+        task.spawn(function()
+            while autoClaimEnabled do
+                for i = 1, 8 do
+                    if not autoClaimEnabled then break end
+                    local args = {
+                        [1] = "claimGift",
+                        [2] = i
+                    }
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").rEvents.freeGiftClaimRemote:InvokeServer(unpack(args))
+                    end)
+                    task.wait(0.2)
+                end
+                task.wait(1)
+            end
+        end)
+    end
+end)
+
+msud:AddSwitch("Auto Spin Wheel", function(state)
+    autoFortuneEnabled = state
+    
+    if autoFortuneEnabled then
+        task.spawn(function()
+            while autoFortuneEnabled do
+                local args = {
+                    [1] = "openFortuneWheel",
+                    [2] = game:GetService("ReplicatedStorage").shared.catalogs.fortuneWheelChances:FindFirstChild("Fortune Wheel")
+                }
+                pcall(function()
+                    game:GetService("ReplicatedStorage").rEvents.openFortuneWheelRemote:InvokeServer(unpack(args))
+                end)
+                task.wait(1)
+            end
+        end)
+    end
+end)
