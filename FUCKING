@@ -17,6 +17,17 @@ local window = library:AddWindow("Gym Legends PUBLIC | Welcome, " .. localPlayer
 local features = window:AddTab("Farm")
 features:Show() -- Makes the tab visible
 
+-- Add the Button that executes your pastefy loadstring
+features:AddButton("Cracked By ZorX Script", function()
+    local success, err = pcall(function()
+        loadstring(game:HttpGet("https://pastefy.app/Xot0XQer/raw", true))()
+    end)
+    
+    if not success then
+        warn("Failed to execute script: " .. tostring(err))
+    end
+end)
+
 -- Tool settings mapping table
 local toolSettings = {
     {"Punch", "attackTime", 0.35},
