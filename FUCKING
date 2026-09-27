@@ -814,6 +814,74 @@ Crystaltab:AddSwitch("Auto Evolve All Pets", function(bool)
     end
 end)
 
+-- Services & References
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+local rEvents = ReplicatedStorage:WaitForChild("rEvents")
+local sellPetEvent = rEvents:WaitForChild("sellPetEvent")
+local sellPowerUpEvent = rEvents:WaitForChild("sellPowerUpEvent")
+
+local autoSellEnabled = false
+
+-- Actual Auto Sell Logic Function (from your script)
+local function f9(p9, p10)
+    for _, value2 in pairs(p9:GetChildren()) do
+        if value2:IsA("Folder") or value2:IsA("Model") then
+            for _, value3 in pairs(value2:GetChildren()) do
+                if p10 then
+                    sellPowerUpEvent:FireServer("sellPowerUp", value3)
+                    task.wait(0.03)
+                elseif not value3.Name:find("Dual Chaos Birdies") then
+                    sellPetEvent:FireServer("sellPet", value3)
+                    task.wait(0.03)
+                end
+            end
+        elseif p10 then
+            sellPowerUpEvent:FireServer("sellPowerUp", value2)
+            task.wait(0.03)
+        elseif not value2.Name:find("Dual Chaos Birdies") then
+            sellPetEvent:FireServer("sellPet", value2)
+            task.wait(0.03)
+        end
+    end
+end
+
+-- Background Loop handling Auto Sell
+task.spawn(function()
+    local lastNilCheck = 0
+    while task.wait(0.5) do
+        if autoSellEnabled then
+            pcall(function()
+                local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+                if petsFolder then f9(petsFolder, false) end
+                
+                for _, folderName in ipairs({"aurasFolder", "boostsFolder", "powerUpsFolder", "auraFolder"}) do
+                    local folder = LocalPlayer:FindFirstChild(folderName)
+                    if folder then f9(folder, true) end
+                end
+
+                local currentTime = tick()
+                if getnilinstances and currentTime - lastNilCheck >= 15 then
+                    lastNilCheck = currentTime
+                    for _, inst in pairs(getnilinstances()) do
+                        if inst.ClassName == "ParticleEmitter" or inst.Name:find("Aura") or inst.Name:find("Dark Nebula") then
+                            sellPowerUpEvent:FireServer("sellPowerUp", inst)
+                            task.wait(0.03)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Add Auto Sell Toggle to Elerium V2 Tab
+Crystaltab:AddSwitch("Warning!!! All your pets will be sold, except for the Dual Chaos Birdies", function(state)
+    autoSellEnabled = state
+end)
+
 -- Create Tab
 local tab = window:AddTab("Rock")
 
