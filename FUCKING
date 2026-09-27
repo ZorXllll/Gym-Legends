@@ -863,7 +863,7 @@ task.spawn(function()
                 end
 
                 local currentTime = tick()
-                if getnilinstances and currentTime - lastNilCheck >= 15 then
+                if getnilinstances and currentTime - lastNilCheck >= 10 then
                     lastNilCheck = currentTime
                     for _, inst in pairs(getnilinstances()) do
                         if inst.ClassName == "ParticleEmitter" or inst.Name:find("Aura") or inst.Name:find("Dark Nebula") then
