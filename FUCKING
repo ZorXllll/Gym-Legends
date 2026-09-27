@@ -17,23 +17,6 @@ local window = library:AddWindow("Gym Legends PUBLIC | Welcome, " .. localPlayer
 local features = window:AddTab("farm")
 features:Show() -- Makes the tab visible
 
--- 🔒 Lock Position
-features:AddSwitch("Lock Position", function(Value)
-    if Value then
-        local currentPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-        getgenv().posLock = game:GetService("RunService").Heartbeat:Connect(function()
-            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
-            end
-        end)
-    else
-        if getgenv().posLock then
-            getgenv().posLock:Disconnect()
-            getgenv().posLock = nil
-        end
-    end
-end)
-
 -- 🖼️ Hide All Frames
 features:AddSwitch("Hide All Frames", function(bool)
     local rSto = game:GetService("ReplicatedStorage")
@@ -526,30 +509,6 @@ features:AddSwitch("Auto Push Up", function(state)
     end)
 end)
 
--- Variables for Auto Farm Loop
-local autoRebirthActive = false
-
--- Add Switch (Toggle)
-features:AddSwitch("Fast Rebirths", function(bool)
-    autoRebirthActive = bool
-    
-    -- When the switch is turned on, start looping
-    if autoRebirthActive then
-        task.spawn(function()
-            while autoRebirthActive do
-                local args = {
-                    "rebirthRequest"
-                }
-                
-                game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer(unpack(args))
-                
-                -- Wait a bit between requests to prevent crashing/rate-limiting
-                task.wait(0.01)
-            end
-        end)
-    end
-end)
-
 features:AddSwitch("Auto Fortune Wheel", function(state)
     wheelEnabled = state
     
@@ -601,6 +560,87 @@ features:AddSwitch("Auto Open Crystal", function(state)
             task.wait(0.5)
         end
     end)
+end)
+
+local rebs = window:AddTab("Rebirths")
+
+local autoRebirthActive = false
+
+-- Add Switch (Toggle)
+rebs:AddSwitch("Fast Rebirths", function(bool)
+    autoRebirthActive = bool
+    
+    -- When the switch is turned on, start looping
+    if autoRebirthActive then
+        task.spawn(function()
+            while autoRebirthActive do
+                local args = {
+                    "rebirthRequest"
+                }
+                
+                game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer(unpack(args))
+                
+                -- Wait a bit between requests to prevent crashing/rate-limiting
+                task.wait(0.01)
+            end
+        end)
+    end
+end)
+
+-- Variables
+local autoRebirthActive = false
+local targetRebirths = 0
+
+-- Target Rebirths Input
+rebs:AddTextBox("Target Rebirths", function(text)
+    -- Convert text to a number (defaults to 0 if invalid input)
+    targetRebirths = tonumber(text) or 0
+end)
+
+-- Auto Rebirth Toggle
+features:AddSwitch("Fast Rebirths", function(bool)
+    autoRebirthActive = bool
+    
+    if autoRebirthActive then
+        task.spawn(function()
+            local player = game:GetService("Players").LocalPlayer
+            local leaderstats = player:WaitForChild("leaderstats", 5)
+            local rebirthStat = leaderstats and leaderstats:FindFirstChild("Rebirths") -- Adjust "Rebirths" if your game names it differently
+
+            while autoRebirthActive do
+                -- Stop automatically if target is reached
+                if rebirthStat and rebirthStat.Value >= targetRebirths then
+                    autoRebirthActive = false
+                    break
+                end
+                
+                local args = {
+                    "rebirthRequest"
+                }
+                
+                game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("rebirthRemote"):InvokeServer(unpack(args))
+                
+                task.wait(0.01)
+            end
+        end)
+    end
+end)
+
+-- 🔒 Lock Position
+rebs:AddSwitch("Lock Position", function(Value)
+    if Value then
+        local currentPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+        getgenv().posLock = game:GetService("RunService").Heartbeat:Connect(function()
+            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
+            end
+        end)
+    else
+        if getgenv().posLock then
+            getgenv().posLock:Disconnect()
+            getgenv().posLock = nil
+        end
+    end
 end)
 
 local teleport = window:AddTab("Teleport")
