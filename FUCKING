@@ -541,6 +541,7 @@ crystalDropdown:Add("Inferno Crystal")
 crystalDropdown:Add("Legends Crystal")
 crystalDropdown:Add("Muscle Elite Crystal")
 crystalDropdown:Add("Galaxy Oracle Crystal")
+crystalDropdown:Add("Ultra Shockwave Crystal")
 
 -- Add Switch for Auto Open Crystal
 features:AddSwitch("Auto Open Crystal", function(state)
