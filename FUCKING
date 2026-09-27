@@ -40,7 +40,7 @@ local toolSettings = {
 }
 
 -- Add the Fast Auto Lit Switch using Elerium syntax
-features:AddSwitch("Fast Auto Lit", function(Value)
+features:AddSwitch("Fast Auto Lift", function(Value)
     _G.FastTools = Value
     
     local LocalPlayer = game:GetService("Players").LocalPlayer
