@@ -509,6 +509,108 @@ features:AddSwitch("Auto Push Up", function(state)
     end)
 end)
 
+-- List of Target Coordinates for Lock Loop Teleport
+local waypoints = {
+    Vector3.new(-4908.17, 6.09, 3650.30),
+    Vector3.new(-4867.79, 6.09, 3816.47),
+    Vector3.new(-4936.04, 6.09, 4004.28),
+    Vector3.new(-5039.36, 6.09, 4095.54),
+    Vector3.new(-5198.50, 31.13, 4132.17),
+    Vector3.new(-5384.98, 36.00, 4070.90),
+    Vector3.new(-5477.06, 18.61, 3971.58),
+    Vector3.new(-5519.96, 33.52, 3796.57),
+    Vector3.new(-5462.58, 20.42, 3619.81),
+    Vector3.new(-5353.45, 19.46, 3523.00),
+    Vector3.new(-5013.74, 6.09, 3763.51),
+    Vector3.new(-5360.01, 6.09, 3723.45)
+}
+
+local autoFarmActive = false
+local FastPunchConnection = nil
+
+-- Combined Single Toggle Switch
+features:AddSwitch("Auto Farm Gems", function(state)
+    autoFarmActive = state
+    local LocalPlayer = game:GetService("Players").LocalPlayer
+    
+    if autoFarmActive then
+        _G.punchanim = true
+        
+        -- 1. Start Teleport Lock Loop
+        task.spawn(function()
+            while autoFarmActive do
+                for _, targetPos in ipairs(waypoints) do
+                    if not autoFarmActive then break end
+                    
+                    -- Lock onto the current waypoint for 1 second
+                    local startTime = tick()
+                    while autoFarmActive and (tick() - startTime < 1) do
+                        local player = game.Players.LocalPlayer
+                        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos)
+                        end
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end)
+        
+        -- 2. Start Fast Punch Loop
+        if FastPunchConnection then 
+            FastPunchConnection:Disconnect() 
+            FastPunchConnection = nil 
+        end
+        
+        FastPunchConnection = game:GetService('RunService').Heartbeat:Connect(function()
+            if _G.punchanim and autoFarmActive then
+                local Character = LocalPlayer.Character
+                if Character then
+                    local Humanoid = Character:FindFirstChildOfClass('Humanoid')
+                    local PunchTool = LocalPlayer.Backpack:FindFirstChild('Punch') or Character:FindFirstChild('Punch')
+                    
+                    if PunchTool then
+                        local attackTime = PunchTool:FindFirstChild('attackTime')
+                        if attackTime then 
+                            attackTime.Value = 0 
+                        end
+                        
+                        -- Auto equip if tool is in backpack
+                        if Humanoid and PunchTool.Parent ~= Character then 
+                            Humanoid:EquipTool(PunchTool) 
+                        end
+                        
+                        PunchTool:Activate()
+                    end
+                end
+            else
+                if FastPunchConnection then 
+                    FastPunchConnection:Disconnect() 
+                    FastPunchConnection = nil 
+                end
+            end
+        end)
+        
+    else
+        -- Turn off everything safely
+        autoFarmActive = false
+        _G.punchanim = false
+        
+        if FastPunchConnection then 
+            FastPunchConnection:Disconnect() 
+            FastPunchConnection = nil 
+        end
+        
+        -- Reset attack timing to default game mechanics
+        local PunchInBackpack = LocalPlayer.Backpack:FindFirstChild('Punch')
+        local PunchInCharacter = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild('Punch')
+        local TargetPunch = PunchInBackpack or PunchInCharacter
+        
+        if TargetPunch and TargetPunch:FindFirstChild('attackTime') then 
+            TargetPunch.attackTime.Value = 0.35 
+        end
+    end
+end):Set(false)
+
 features:AddSwitch("Auto Fortune Wheel", function(state)
     wheelEnabled = state
     
