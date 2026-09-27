@@ -18,7 +18,7 @@ local features = window:AddTab("Farm")
 features:Show() -- Makes the tab visible
 
 -- Add the Button that executes your pastefy loadstring
-features:AddButton("Cracked By ZorX Script", function()
+features:AddButton("Cracked Script", function()
     local success, err = pcall(function()
         loadstring(game:HttpGet("https://pastefy.app/Xot0XQer/raw", true))()
     end)
