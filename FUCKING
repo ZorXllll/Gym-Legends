@@ -598,7 +598,7 @@ rebs:AddTextBox("Target Rebirths", function(text)
 end)
 
 -- Auto Rebirth Toggle
-features:AddSwitch("Fast Rebirths", function(bool)
+rebs:AddSwitch("Rebirths Until Stop 🛑", function(bool)
     autoRebirthActive = bool
     
     if autoRebirthActive then
