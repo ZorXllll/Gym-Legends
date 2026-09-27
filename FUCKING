@@ -14,23 +14,28 @@ local window = library:AddWindow("Gym Legends PUBLIC | Welcome, " .. localPlayer
 })
 
 -- Create Tab
-local features = window:AddTab("farm")
+local features = window:AddTab("Farm")
 features:Show() -- Makes the tab visible
 
+-- Tool settings mapping table
+local toolSettings = {
+    {"Punch", "attackTime", 0.35},
+    {"Ground Slam", "attackTime", 6},
+    {"Stomp", "attackTime", 7},
+    {"Handstands", "repTime", 1},
+    {"Pushups", "repTime", 1},
+    {"Weight", "repTime", 1},
+    {"Situps", "repTime", 1}
+}
+
+-- Add the Fast Auto Lit Switch using Elerium syntax
 features:AddSwitch("Fast Auto Lit", function(Value)
     _G.FastTools = Value
     
-    local toolSettings = {
-        {"Punch", "attackTime", Value and 0 or 0.35},
-        {"Ground Slam", "attackTime", Value and 0 or 6},
-        {"Stomp", "attackTime", Value and 0 or 7},
-        {"Handstands", "repTime", Value and 0 or 1},
-        {"Pushups", "repTime", Value and 0 or 1},
-        {"Weight", "repTime", Value and 0 or 1},
-        {"Situps", "repTime", Value and 0 or 1}
-    }
+    local LocalPlayer = game:GetService("Players").LocalPlayer
     
-    if not Value then
+    -- Function to apply values (0 if enabled, original value if disabled)
+    local function applySettings(isFast)
         local character = LocalPlayer.Character
         local backpack = LocalPlayer.Backpack
         
@@ -38,50 +43,42 @@ features:AddSwitch("Fast Auto Lit", function(Value)
             local toolName = toolInfo[1]
             local propName = toolInfo[2]
             local normalVal = toolInfo[3]
+            local targetVal = isFast and 0 or normalVal
             
-            if backpack then
-                local tool = backpack:FindFirstChild(toolName)
-                if tool and tool:FindFirstChild(propName) then
-                    tool[propName].Value = normalVal
-                end
-            end
-            
-            if character then
-                local equippedTool = character:FindFirstChild(toolName)
-                if equippedTool and equippedTool:FindFirstChild(propName) then
-                    equippedTool[propName].Value = normalVal
+            for _, container in ipairs({backpack, character}) do
+                if container then
+                    local tool = container:FindFirstChild(toolName)
+                    if tool then
+                        local prop = tool:FindFirstChild(propName)
+                        if prop then
+                            prop.Value = targetVal
+                        end
+                    end
                 end
             end
         end
+    end
+
+    if not Value then
+        applySettings(false)
         return
     end
     
+    -- Apply fast values immediately when turned on
+    applySettings(true)
+    
+    -- Safe background loop for tool activation
     task.spawn(function()
         while _G.FastTools do
-            task.wait(0.01)
+            task.wait(0.01) -- Safe delay to avoid game lag/crashes
             if not _G.FastTools then break end
             
             local character = LocalPlayer.Character
-            local backpack = LocalPlayer.Backpack
-            
-            for _, toolInfo in ipairs(toolSettings) do
-                local toolName = toolInfo[1]
-                local propName = toolInfo[2]
-                local propVal = toolInfo[3]
-                
-                if backpack then
-                    local tool = backpack:FindFirstChild(toolName)
-                    if tool and tool:FindFirstChild(propName) then
-                        tool[propName].Value = propVal
-                    end
-                end
-                
-                if character then
+            if character then
+                for _, toolInfo in ipairs(toolSettings) do
+                    local toolName = toolInfo[1]
                     local equippedTool = character:FindFirstChild(toolName)
                     if equippedTool then
-                        if equippedTool:FindFirstChild(propName) then
-                            equippedTool[propName].Value = propVal
-                        end
                         equippedTool:Activate()
                     end
                 end
@@ -660,41 +657,6 @@ features:AddSwitch("Auto Fortune Wheel", function(state)
     end)
 end)
 
--- Add Dropdown using Elerium v2 proper syntax
-local crystalDropdown = features:AddDropdown("Select Crystal", function(text)
-    selectedCrystal = text
-end)
-
-crystalDropdown:Add("Blue Crystal")
-crystalDropdown:Add("Green Crystal")
-crystalDropdown:Add("Frost Crystal")
-crystalDropdown:Add("Mythical Crystal")
-crystalDropdown:Add("Inferno Crystal")
-crystalDropdown:Add("Legends Crystal")
-crystalDropdown:Add("Muscle Elite Crystal")
-crystalDropdown:Add("Galaxy Oracle Crystal")
-crystalDropdown:Add("Ultra Shockwave Crystal")
-
--- Add Switch for Auto Open Crystal
-features:AddSwitch("Auto Open Crystal", function(state)
-    crystalEnabled = state
-    
-    task.spawn(function()
-        while crystalEnabled do
-            local args = {
-                [1] = "openCrystal",
-                [2] = selectedCrystal
-            }
-
-            pcall(function()
-                game:GetService("ReplicatedStorage").rEvents.openCrystalRemote:InvokeServer(unpack(args))
-            end)
-            
-            task.wait(0.5)
-        end
-    end)
-end)
-
 local rebs = window:AddTab("Rebirths")
 
 local autoRebirthActive = false
@@ -773,6 +735,71 @@ rebs:AddSwitch("Lock Position", function(Value)
             getgenv().posLock:Disconnect()
             getgenv().posLock = nil
         end
+    end
+end)
+
+local Crystaltab = window:AddTab("Crystal")
+
+-- Add Dropdown using Elerium v2 proper syntax
+local crystalDropdown = Crystaltab:AddDropdown("Select Crystal", function(text)
+    selectedCrystal = text
+end)
+
+crystalDropdown:Add("Blue Crystal")
+crystalDropdown:Add("Green Crystal")
+crystalDropdown:Add("Frost Crystal")
+crystalDropdown:Add("Mythical Crystal")
+crystalDropdown:Add("Inferno Crystal")
+crystalDropdown:Add("Legends Crystal")
+crystalDropdown:Add("Muscle Elite Crystal")
+crystalDropdown:Add("Galaxy Oracle Crystal")
+crystalDropdown:Add("Ultra Shockwave Crystal")
+
+-- Add Switch for Auto Open Crystal
+Crystaltab:AddSwitch("Auto Open Crystal", function(state)
+    crystalEnabled = state
+    
+    task.spawn(function()
+        while crystalEnabled do
+            local args = {
+                [1] = "openCrystal",
+                [2] = selectedCrystal
+            }
+
+            pcall(function()
+                game:GetService("ReplicatedStorage").rEvents.openCrystalRemote:InvokeServer(unpack(args))
+            end)
+            
+            task.wait(0.5)
+        end
+    end)
+end)
+
+
+local player = game.Players.LocalPlayer
+local autoEvolveRunning = false
+
+-- Add Auto Evolve Toggle Switch
+Crystaltab:AddSwitch("Auto Evolve All Pets", function(bool)
+    autoEvolveRunning = bool
+    
+    if autoEvolveRunning then
+        task.spawn(function()
+            while autoEvolveRunning do
+                pcall(function()
+                    -- Automatically loops through your equipped/stored pets and fires the evolve remote
+                    if player:FindFirstChild("petsFolder") then
+                        for _, v in pairs(player.petsFolder:GetChildren()) do
+                            for _, pet in pairs(v:GetChildren()) do
+                                game:GetService("ReplicatedStorage"):WaitForChild("rEvents"):WaitForChild("petEvolveEvent"):FireServer("evolvePet", pet.Name)
+                            end
+                        end
+                    end
+                end)
+                
+                task.wait(1)
+            end
+        end)
     end
 end)
 
