@@ -483,7 +483,94 @@ features:AddButton("Anti Lag", function()
     end
 end)
 
+-- Global tracking variables
+local farmConnection = nil
+local farmEnabled = false
 
+-- Add Switch / Toggle
+local fastFarmSwitch = features:AddSwitch("Fast Farming", function(state)
+    farmEnabled = state
+    
+    local _LocalPlayer = game.Players.LocalPlayer
+    local _Backpack = _LocalPlayer:FindFirstChild('Backpack')
+    
+    -- Disconnect old loop if any
+    if farmConnection then 
+        farmConnection:Disconnect() 
+        farmConnection = nil 
+    end
+
+    if state then
+        -- COMBINED HEARTBEAT LOOP (Para sabay silang active, mabilis mag-punch at mag-activate ng pushup/reps)
+        farmConnection = game:GetService('RunService').Heartbeat:Connect(function()
+            if not farmEnabled then return end
+            
+            local _Character = _LocalPlayer.Character
+            if not _Character or not _Backpack then return end
+            
+            local _Humanoid = _Character:FindFirstChildOfClass('Humanoid')
+            local holdingTool = _Character:FindFirstChildOfClass('Tool')
+            
+            -- 1. HANDLE PUNCH (Auto equip & zero attack time)
+            local _Punch = _Character:FindFirstChild('Punch')
+            if not _Punch then
+                _Punch = _Backpack:FindFirstChild('Punch')
+                if _Punch and _Humanoid then
+                    _Humanoid:EquipTool(_Punch)
+                end
+            else
+                local _attackTime = _Punch:FindFirstChild('attackTime')
+                if _attackTime then _attackTime.Value = 0 end
+                _Punch:Activate()
+            end
+            
+            -- 2. HANDLE PUSH UP / MAT (Auto equip & activate tool para laging active ang pushup)
+            local hasPushUpTool = holdingTool and (holdingTool.Name:lower():find("push") or holdingTool.Name:lower():find("mat"))
+            if not hasPushUpTool then
+                for _, tool in ipairs(_Backpack:GetChildren()) do
+                    if tool:IsA("Tool") and (tool.Name:lower():find("push") or tool.Name:lower():find("mat")) then
+                        if _Humanoid then
+                            _Humanoid:EquipTool(tool)
+                        end
+                        break
+                    end
+                end
+            else
+                holdingTool:Activate()
+            end
+            
+            -- 3. FIRE MUSCLE EVENT
+            local args = {
+                [1] = "rep"
+            }
+            if _LocalPlayer:FindFirstChild('muscleEvent') then
+                _LocalPlayer.muscleEvent:FireServer(unpack(args))
+            end
+        end)
+
+    else
+        -- When switched OFF: Clean up and put tools back
+        if farmConnection then 
+            farmConnection:Disconnect() 
+            farmConnection = nil 
+        end
+        
+        local character = _LocalPlayer.Character
+        if character and _Backpack then
+            for _, tool in ipairs(character:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("push") or tool.Name:lower():find("mat") or tool.Name:lower():find("punch")) then
+                    if tool.Name == "Punch" and tool:FindFirstChild('attackTime') then
+                        tool.attackTime.Value = 0.35
+                    end
+                    tool.Parent = _Backpack
+                end
+            end
+        end
+    end
+end)
+
+-- Set default switch state to false
+fastFarmSwitch:Set(false)
 
 -- Variable to track the switch state
 local farmEnabled = false
